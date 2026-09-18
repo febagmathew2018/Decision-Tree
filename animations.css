@@ -1,0 +1,65 @@
+/* animations.css — all motion for the notebook, kept separate from layout.
+   Loaded after styles.css so these rules win. */
+
+/* kernel indicator: breathes while a cell is executing */
+@keyframes pulse-dot{
+  0%,100%{box-shadow:0 0 0 4px rgba(251,146,60,.18)}
+  50%    {box-shadow:0 0 0 9px rgba(251,146,60,.05)}
+}
+.dot.busy{animation:pulse-dot 1.1s ease-in-out infinite}
+
+/* In [*]: prompt blinks the way a real kernel does */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.28}}
+.prompt.busy{animation:blink .75s steps(2,start) infinite}
+
+/* the running cell lifts out of the page for a moment */
+@keyframes cell-run{
+  0%  {box-shadow:0 0 0 0 rgba(34,197,94,.34)}
+  70% {box-shadow:0 0 0 12px rgba(34,197,94,0)}
+  100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}
+}
+.cell.active{animation:cell-run .85s ease-out}
+
+/* fresh output slides in once, when a cell finishes */
+@keyframes out-in{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.out[data-fresh] .outlabel,
+.out[data-fresh] .stdout,
+.out[data-fresh] .kpis,
+.out[data-fresh] .verdict,
+.out[data-fresh] .scrollx,
+.out[data-fresh] .tablewrap{animation:out-in .32s cubic-bezier(.2,.7,.3,1) both}
+
+/* KPI tiles arrive in sequence rather than all at once */
+.out[data-fresh] .kpis .kpi{animation:out-in .34s cubic-bezier(.2,.7,.3,1) both}
+.out[data-fresh] .kpis .kpi:nth-child(2){animation-delay:.05s}
+.out[data-fresh] .kpis .kpi:nth-child(3){animation-delay:.10s}
+.out[data-fresh] .kpis .kpi:nth-child(4){animation-delay:.15s}
+
+/* bars grow from the left on first paint; widths still transition on change */
+@keyframes bar-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.out[data-fresh] .bars .seg{transform-origin:left center;animation:bar-grow .45s cubic-bezier(.2,.7,.3,1) both}
+
+/* tree edges draw themselves */
+@keyframes draw{to{stroke-dashoffset:0}}
+.out[data-fresh] svg.tree .edge{stroke-dasharray:260;stroke-dashoffset:260;animation:draw .6s ease-out forwards}
+.out[data-fresh] svg.tree .node{animation:out-in .4s ease-out both}
+
+/* train / test proportion bar */
+.splitviz div{transition:width .35s cubic-bezier(.4,0,.2,1)}
+
+/* speech button acknowledges that it is talking */
+@keyframes speak-glow{
+  0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.30)}
+  50%    {box-shadow:0 0 0 7px rgba(34,197,94,0)}
+}
+.speak.on{animation:speak-glow 1.4s ease-in-out infinite}
+
+/* buttons and collapsibles */
+.run,.ghost,.chip,.speak,.cmcell{transition:background .15s ease,border-color .15s ease,color .15s ease,transform .08s ease}
+details.back summary::before{transition:transform .2s ease}
+details.back[open] .backbody{animation:out-in .25s ease-out both}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  svg.tree .edge{stroke-dashoffset:0}
+}
