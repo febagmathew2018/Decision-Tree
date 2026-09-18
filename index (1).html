@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Churn Prediction — Decision Tree</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b0f19;
+    --bg-panel: #10141f;
+    --bg-cell: #10141f;
+    --bg-cellhead: #141a29;
+    --bg-output: #0d1117;
+    --border: #232a3d;
+    --border-soft: #1a2033;
+    --text: #f2f4f8;
+    --text-dim: #aab2c5;
+    --text-mute: #6b7385;
+    --green: #22e07a;
+    --green-dim: #16a35c;
+    --green-bg: rgba(34,224,122,0.10);
+    --red: #ff6b6b;
+    --red-bg: rgba(255,107,107,0.10);
+    --amber: #f2c94c;
+    --blue: #6fb3ff;
+    --purple: #c792ea;
+    --radius: 10px;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection{ background: var(--green-bg); color: var(--green); }
+
+  a{ color: var(--green); }
+
+  /* ---------- Layout shell ---------- */
+  .page{
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px 80px;
+  }
+
+  header.hero{
+    padding: 48px 0 24px;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 22px;
+  }
+
+  .kernel-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 18px;
+    color: var(--text-mute);
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .kernel-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    flex-shrink:0;
+  }
+
+  h1.title{
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 10px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  h1.title .accent{ color: var(--green); }
+
+  p.subtitle{
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 640px;
+  }
+
+  .toolbar{
+    display:flex;
+    gap:10px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+
+  .tbtn{
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .tbtn:hover{ border-color: var(--green-dim); color: var(--text); }
+  .tbtn.primary{
+    background: var(--green);
+    color: #04170c;
+    border-color: var(--green);
+  }
+  .tbtn.primary:hover{ background: #3ef093; }
+
+  /* ---------- Notice banner ---------- */
+  .banner{
+    display:flex;
+    align-items:flex-start;
+    gap: 12px;
+    background: linear-gradient(180deg, rgba(34,224,122,0.09), rgba(34,224,122,0.03));
+    border: 1px solid rgba(34,224,122,0.28);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 22px 0 30px;
+    font-size: 14px;
+    color: #d3f5e3;
+  }
+  .banner .icon{
+    color: var(--green);
+    font-family: var(--mono);
+    font-weight: 700;
+    flex-shrink:0;
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    background: rgba(34,224,122,0.18);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 13px;
+    margin-top: 1px;
+  }
+  .banner b{ color: var(--green); font-weight: 700; }
+
+  /* ---------- Notebook cell ---------- */
+  .cell{
+    margin-bottom: 22px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+    background: var(--bg-panel);
+  }
+
+  .cell-label{
+    display:flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 2px 8px 2px;
+  }
+  .cell-label .step-title{
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.2px;
+  }
+  .cell-label .step-desc{
+    font-size: 12.5px;
+    color: var(--text-mute);
+  }
+
+  .code-block{
+    display:flex;
+    align-items: stretch;
+    background: var(--bg-cell);
+  }
+
+  .in-badge{
+    flex-shrink:0;
+    width: 84px;
+    padding: 14px 10px 14px 16px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--green);
+    background: var(--bg-cellhead);
+    border-right: 1px solid var(--border-soft);
+    user-select: none;
+    white-space: nowrap;
+  }
+  .in-badge .n{ color: var(--green); font-weight: 600; }
+
+  .code-wrap{
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cell-actions{
+    position:absolute;
+    top: 8px;
+    right: 8px;
+    display:flex;
+    gap: 6px;
+    opacity: 0.75;
+    transition: opacity .15s ease;
+    z-index: 3;
+  }
+  .code-wrap:hover .cell-actions{ opacity: 1; }
+
+  .icon-btn{
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: rgba(11,15,25,0.85);
+    color: var(--text-dim);
+    cursor: pointer;
+    backdrop-filter: blur(2px);
+    transition: all .15s ease;
+  }
+  .icon-btn:hover{ color: var(--text); border-color: var(--text-mute); }
+
+  .run-btn{
+    background: var(--green);
+    color: #04170c;
+    border-color: var(--green);
+  }
+  .run-btn:hover{ background: #3ef093; }
+  .run-btn.running{ background: var(--amber); border-color: var(--amber); color:#241a00; cursor: progress; }
+
+  pre.code{
+    margin: 0;
+    padding: 14px 100px 14px 18px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #d7dce6;
+    white-space: pre;
+    overflow-x: auto;
+    outline: none;
+    tab-size: 4;
+  }
+  pre.code:focus{
+    background: #121729;
+    box-shadow: inset 3px 0 0 var(--green);
+  }
+
+  .tok-keyword{ color: var(--purple); }
+  .tok-string{ color: #a8e6a3; }
+  .tok-comment{ color: var(--text-mute); font-style: italic; }
+  .tok-number{ color: var(--amber); }
+  .tok-func{ color: var(--blue); }
+
+  /* ---------- Output block ---------- */
+  .output{
+    display: none;
+    background: var(--bg-output);
+    border-top: 1px solid var(--border-soft);
+    padding: 14px 18px 16px 100px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: #c9d1e0;
+    animation: fadein .25s ease;
+  }
+  .output.show{ display: block; }
+
+  @keyframes fadein{
+    from{ opacity:0; transform: translateY(-4px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  .out-tag{
+    font-size: 11.5px;
+    color: var(--text-mute);
+    margin-bottom: 8px;
+    letter-spacing: 0.3px;
+  }
+  .out-tag .n{ color: var(--red); font-weight:600; }
+
+  .out-line{ white-space: pre-wrap; line-height: 1.6; }
+  .out-dim{ color: var(--text-mute); }
+  .out-green{ color: var(--green); }
+  .out-red{ color: var(--red); }
+  .out-amber{ color: var(--amber); }
+
+  /* dataframe table */
+  table.df{
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 8px;
+    font-size: 12.5px;
+    font-family: var(--mono);
+  }
+  table.df th{
+    text-align: left;
+    padding: 7px 12px;
+    color: var(--text-mute);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  table.df td{
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    color: #d7dce6;
+    white-space: nowrap;
+  }
+  table.df tr:hover td{ background: rgba(255,255,255,0.02); }
+  .churn-yes{ color: var(--red); font-weight:600; }
+  .churn-no{ color: var(--green); font-weight:600; }
+
+  .scroll-x{ overflow-x: auto; }
+
+  /* split comparison rows */
+  .split-row{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .split-row:last-child{ border-bottom:none; }
+  .split-feat{ width: 170px; flex-shrink:0; color: var(--text); }
+  .split-bar-track{
+    flex:1;
+    height: 8px;
+    background: var(--border-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .split-bar-fill{
+    height: 100%;
+    background: var(--text-mute);
+    border-radius: 4px;
+  }
+  .split-row.best .split-bar-fill{ background: var(--green); }
+  .split-val{ width: 90px; text-align:right; flex-shrink:0; color: var(--text-dim); }
+  .best-badge{
+    font-family: var(--sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(34,224,122,0.35);
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-left: 8px;
+    flex-shrink:0;
+  }
+
+  /* tree diagram */
+  .tree-wrap{ overflow-x:auto; padding: 6px 0; }
+  .tree-node{
+    fill: var(--bg-cellhead);
+    stroke: var(--border);
+  }
+  .tree-node.leaf-no{ fill: rgba(34,224,122,0.14); stroke: var(--green-dim); }
+  .tree-node.leaf-yes{ fill: rgba(255,107,107,0.14); stroke: #b64545; }
+  .tree-text{ fill: #d7dce6; font-family: var(--mono); font-size: 11px; }
+  .tree-text.small{ font-size: 10px; fill: var(--text-mute); }
+  .tree-link{ stroke: var(--border); stroke-width: 1.4; fill:none; }
+  .tree-edge-label{ fill: var(--text-mute); font-family: var(--mono); font-size: 10px; }
+
+  /* confusion matrix */
+  .cm-wrap{ display:flex; gap: 22px; align-items:flex-start; flex-wrap: wrap; }
+  .cm-grid{
+    display:grid;
+    grid-template-columns: auto repeat(2, 92px);
+    grid-template-rows: auto repeat(2, 72px);
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .cm-cell{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border-radius: 6px;
+    border: 1px solid var(--border-soft);
+  }
+  .cm-cell .val{ font-size: 20px; font-weight:700; font-family: var(--sans); }
+  .cm-cell .lbl{ font-size: 10.5px; color: var(--text-mute); margin-top:2px; }
+  .cm-tp, .cm-tn{ background: rgba(34,224,122,0.12); border-color: rgba(34,224,122,0.3); }
+  .cm-fp, .cm-fn{ background: rgba(255,107,107,0.10); border-color: rgba(255,107,107,0.28); }
+  .cm-head{ display:flex; align-items:center; justify-content:center; color: var(--text-mute); font-size: 11px; }
+  .cm-legend{ font-size: 12px; color: var(--text-dim); line-height: 1.9; }
+  .cm-legend .sw{ display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:7px; }
+
+  /* metric stat cards */
+  .stat-grid{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .stat-card{
+    background: var(--bg-cellhead);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .stat-card .v{ font-family: var(--sans); font-size: 22px; font-weight: 800; color: var(--green); }
+  .stat-card .k{ font-size: 11px; color: var(--text-mute); margin-top: 3px; }
+
+  /* prediction alert */
+  .pred-alert{
+    margin-top: 10px;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: var(--sans);
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .pred-alert.churn{ background: var(--red-bg); border: 1px solid rgba(255,107,107,0.32); }
+  .pred-alert.nochurn{ background: var(--green-bg); border: 1px solid rgba(34,224,122,0.32); }
+  .pred-alert .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .pred-alert.churn .dot{ background: var(--red); }
+  .pred-alert.nochurn .dot{ background: var(--green); }
+  .pred-alert .pv{ font-weight:700; }
+
+  /* pipeline log */
+  .log-line{ display:flex; gap:10px; padding: 2px 0; }
+  .log-line .tag{ color: var(--text-mute); flex-shrink:0; }
+  .log-line.ok .msg::before{ content: "✓ "; color: var(--green); }
+  .log-line.wait .msg::before{ content: "… "; color: var(--amber); }
+
+  footer{
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-mute);
+    font-size: 12.5px;
+    text-align:center;
+  }
+
+  @media (max-width: 640px){
+    h1.title{ font-size: 26px; }
+    .in-badge{ width: 58px; padding: 12px 6px 12px 10px; font-size: 11px; }
+    pre.code{ padding: 12px 16px 12px 12px; font-size: 12.5px; }
+    .output{ padding-left: 16px; }
+    .stat-grid{ grid-template-columns: repeat(2, 1fr); }
+    .cell-actions{ position: static; opacity:1; justify-content:flex-end; padding: 6px 8px 0; }
+    .code-block{ flex-direction: column; }
+    .in-badge{ width:auto; border-right:none; border-bottom:1px solid var(--border-soft); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="kernel-row">
+      <span class="kernel-dot"></span>
+      <span>Python 3.11.4 — kernel: churn-env — idle</span>
+    </div>
+    <h1 class="title">Customer Churn Prediction <span class="accent">— Decision Tree</span></h1>
+    <p class="subtitle">A Jupyter-style interactive teaching notebook. Each cell below is a live, editable Python snippet from a decision-tree churn model — edit the code, run the cell, and watch the output update just like a real notebook.</p>
+    <div class="toolbar">
+      <button class="tbtn primary" id="runAllBtn">▶ Run All Cells</button>
+      <button class="tbtn" id="restartBtn">↺ Restart &amp; Clear Outputs</button>
+    </div>
+  </header>
+
+  <div class="banner">
+    <span class="icon">i</span>
+    <div><b>Notebook mode:</b> click inside any Python cell and edit or remove code. Then click <b>Run Cell</b> to simulate execution and view the output.</div>
+  </div>
+
+  <!-- ============ CELL 1 ============ -->
+  <section class="cell" data-cell="1">
+    <div class="cell-label"><span class="step-title">Step 1 · Load the dataset</span><span class="step-desc">— read the raw customer churn CSV into a DataFrame</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">1</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="1">import pandas as pd
+
+# Load the customer churn dataset
+df = pd.read_csv("customer_churn.csv")
+
+print(f"Dataset shape: {df.shape}")
+df.head()</pre>
+      </div>
+    </div>
+    <div class="output" data-out="1">
+      <div class="out-tag">Out&nbsp;[<span class="n">1</span>]</div>
+      <div class="out-line">Dataset shape: (7043, 21)</div>
+      <div class="scroll-x">
+        <table class="df">
+          <thead><tr><th>customerID</th><th>gender</th><th>tenure</th><th>Contract</th><th>MonthlyCharges</th><th>TotalCharges</th><th>Churn</th></tr></thead>
+          <tbody>
+            <tr><td>7590-VHVEG</td><td>Female</td><td>1</td><td>Month-to-month</td><td>29.85</td><td>29.85</td><td class="churn-no">No</td></tr>
+            <tr><td>5575-GNVDE</td><td>Male</td><td>34</td><td>One year</td><td>56.95</td><td>1889.50</td><td class="churn-no">No</td></tr>
+            <tr><td>3668-QPYBK</td><td>Male</td><td>2</td><td>Month-to-month</td><td>53.85</td><td>108.15</td><td class="churn-yes">Yes</td></tr>
+            <tr><td>7795-CFOCW</td><td>Male</td><td>45</td><td>One year</td><td>42.30</td><td>1840.75</td><td class="churn-no">No</td></tr>
+            <tr><td>9237-HQITU</td><td>Female</td><td>2</td><td>Month-to-month</td><td>70.70</td><td>151.65</td><td class="churn-yes">Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 2 ============ -->
+  <section class="cell" data-cell="2">
+    <div class="cell-label"><span class="step-title">Step 2 · Encode categorical features</span><span class="step-desc">— one-hot encode string columns with <code>pd.get_dummies</code></span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">2</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="2">categorical_cols = df.select_dtypes(include="object").columns.drop("customerID")
+
+# One-hot encode categorical features
+df_encoded = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+
+print(f"Encoded shape: {df_encoded.shape}")
+df_encoded.head()</pre>
+      </div>
+    </div>
+    <div class="output" data-out="2">
+      <div class="out-tag">Out&nbsp;[<span class="n">2</span>]</div>
+      <div class="out-line">Encoded shape: (7043, 31)</div>
+      <div class="out-line out-dim">New columns: Contract_One year, Contract_Two year, InternetService_Fiber optic,
+InternetService_No, PaymentMethod_Electronic check, PaymentMethod_Mailed check,
+gender_Male, Partner_Yes, Dependents_Yes, PaperlessBilling_Yes ... (+21 more)</div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 3 ============ -->
+  <section class="cell" data-cell="3">
+    <div class="cell-label"><span class="step-title">Step 3 · Select features &amp; target</span><span class="step-desc">— split the encoded frame into <code>X</code> and <code>y</code></span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">3</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="3"># Select features (X) and target (y)
+X = df_encoded.drop(columns=["customerID", "Churn_Yes"])
+y = df_encoded["Churn_Yes"]
+
+print(f"Feature count: {X.shape[1]}")
+print(f"Target distribution:\n{y.value_counts()}")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="3">
+      <div class="out-tag">Out&nbsp;[<span class="n">3</span>]</div>
+      <div class="out-line">Feature count: 30
+Target distribution:
+0    5174
+1    1869
+Name: Churn_Yes, dtype: int64</div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 4 ============ -->
+  <section class="cell" data-cell="4">
+    <div class="cell-label"><span class="step-title">Step 4 · Train/test split</span><span class="step-desc">— hold out 20% of customers for evaluation</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">4</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="4">from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+print(f"Train set: {X_train.shape}")
+print(f"Test set:  {X_test.shape}")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="4">
+      <div class="out-tag">Out&nbsp;[<span class="n">4</span>]</div>
+      <div class="out-line">Train set: (5634, 30)
+Test set:  (1409, 30)</div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 5 ============ -->
+  <section class="cell" data-cell="5">
+    <div class="cell-label"><span class="step-title">Step 5 · Build &amp; fit the model</span><span class="step-desc">— train a <code>DecisionTreeClassifier</code></span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">5</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="5">from sklearn.tree import DecisionTreeClassifier
+
+clf = DecisionTreeClassifier(
+    max_depth=4,
+    criterion="gini",
+    random_state=42
+)
+
+clf.fit(X_train, y_train)
+print("Model trained successfully.")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="5">
+      <div class="out-tag">Out&nbsp;[<span class="n">5</span>]</div>
+      <div class="out-line out-green">Model trained successfully.</div>
+      <div class="out-line out-dim">DecisionTreeClassifier(max_depth=4, criterion='gini', random_state=42)</div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 6 ============ -->
+  <section class="cell" data-cell="6">
+    <div class="cell-label"><span class="step-title">Step 6 · Candidate root-split simulator</span><span class="step-desc">— compare information gain across candidate features</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">6</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="6"># Compare candidate root splits by information gain
+candidates = ["Contract", "tenure", "InternetService", "MonthlyCharges", "PaymentMethod"]
+
+for feature in candidates:
+    gain = compute_information_gain(df, feature, target="Churn")
+    print(f"{feature:<18} gini_gain = {gain:.4f}")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="6">
+      <div class="out-tag">Out&nbsp;[<span class="n">6</span>]</div>
+      <div class="split-row best">
+        <div class="split-feat">Contract</div>
+        <div class="split-bar-track"><div class="split-bar-fill" style="width:100%"></div></div>
+        <div class="split-val">0.1461</div>
+        <div class="best-badge">BEST SPLIT</div>
+      </div>
+      <div class="split-row">
+        <div class="split-feat">tenure</div>
+        <div class="split-bar-track"><div class="split-bar-fill" style="width:78%"></div></div>
+        <div class="split-val">0.1142</div>
+      </div>
+      <div class="split-row">
+        <div class="split-feat">InternetService</div>
+        <div class="split-bar-track"><div class="split-bar-fill" style="width:57%"></div></div>
+        <div class="split-val">0.0838</div>
+      </div>
+      <div class="split-row">
+        <div class="split-feat">PaymentMethod</div>
+        <div class="split-bar-track"><div class="split-bar-fill" style="width:33%"></div></div>
+        <div class="split-val">0.0481</div>
+      </div>
+      <div class="split-row">
+        <div class="split-feat">MonthlyCharges</div>
+        <div class="split-bar-track"><div class="split-bar-fill" style="width:21%"></div></div>
+        <div class="split-val">0.0309</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 7 ============ -->
+  <section class="cell" data-cell="7">
+    <div class="cell-label"><span class="step-title">Step 7 · Visualize the tree</span><span class="step-desc">— render the fitted tree with <code>plot_tree</code></span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">7</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="7">from sklearn.tree import plot_tree
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(14, 8))
+plot_tree(
+    clf,
+    feature_names=X.columns,
+    class_names=["No Churn", "Churn"],
+    filled=True,
+    rounded=True,
+    max_depth=3
+)
+plt.show()</pre>
+      </div>
+    </div>
+    <div class="output" data-out="7">
+      <div class="out-tag">Out&nbsp;[<span class="n">7</span>]</div>
+      <div class="tree-wrap">
+        <svg viewBox="0 0 760 320" width="100%" style="min-width:620px;">
+          <path class="tree-link" d="M380,42 L190,110"></path>
+          <path class="tree-link" d="M380,42 L570,110"></path>
+          <path class="tree-link" d="M190,140 L100,208"></path>
+          <path class="tree-link" d="M190,140 L280,208"></path>
+          <path class="tree-link" d="M570,140 L480,208"></path>
+          <path class="tree-link" d="M570,140 L660,208"></path>
+          <text class="tree-edge-label" x="255" y="72">True</text>
+          <text class="tree-edge-label" x="470" y="72">False</text>
+
+          <rect class="tree-node" x="300" y="10" width="160" height="46" rx="7"></rect>
+          <text class="tree-text" x="380" y="28" text-anchor="middle">Contract ≤ 0.5</text>
+          <text class="tree-text small" x="380" y="42" text-anchor="middle">gini = 0.395, n = 5634</text>
+
+          <rect class="tree-node" x="112" y="110" width="156" height="44" rx="7"></rect>
+          <text class="tree-text" x="190" y="128" text-anchor="middle">tenure ≤ 5.5</text>
+          <text class="tree-text small" x="190" y="142" text-anchor="middle">gini = 0.483, n = 3121</text>
+
+          <rect class="tree-node" x="492" y="110" width="156" height="44" rx="7"></rect>
+          <text class="tree-text" x="570" y="128" text-anchor="middle">InternetService_Fiber</text>
+          <text class="tree-text small" x="570" y="142" text-anchor="middle">gini = 0.161, n = 2513</text>
+
+          <rect class="tree-node leaf-yes" x="30" y="208" width="140" height="46" rx="7"></rect>
+          <text class="tree-text" x="100" y="228" text-anchor="middle">class = Churn</text>
+          <text class="tree-text small" x="100" y="242" text-anchor="middle">gini = 0.44, n = 812</text>
+
+          <rect class="tree-node leaf-no" x="210" y="208" width="140" height="46" rx="7"></rect>
+          <text class="tree-text" x="280" y="228" text-anchor="middle">class = No Churn</text>
+          <text class="tree-text small" x="280" y="242" text-anchor="middle">gini = 0.38, n = 2309</text>
+
+          <rect class="tree-node leaf-no" x="410" y="208" width="140" height="46" rx="7"></rect>
+          <text class="tree-text" x="480" y="228" text-anchor="middle">class = No Churn</text>
+          <text class="tree-text small" x="480" y="242" text-anchor="middle">gini = 0.09, n = 1788</text>
+
+          <rect class="tree-node leaf-yes" x="590" y="208" width="140" height="46" rx="7"></rect>
+          <text class="tree-text" x="660" y="228" text-anchor="middle">class = Churn</text>
+          <text class="tree-text small" x="660" y="242" text-anchor="middle">gini = 0.34, n = 725</text>
+        </svg>
+      </div>
+      <div class="out-line out-dim" style="margin-top:6px;">&lt;Figure size 1400x800 with 1 Axes&gt; — tree truncated to max_depth=2 for display</div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 8 ============ -->
+  <section class="cell" data-cell="8">
+    <div class="cell-label"><span class="step-title">Step 8 · Predict unseen customers</span><span class="step-desc">— run inference on the held-out test set</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">8</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="8"># Predict churn on unseen test customers
+y_pred = clf.predict(X_test)
+y_proba = clf.predict_proba(X_test)[:, 1]
+
+results = X_test.copy()
+results["Actual"] = y_test.values
+results["Predicted"] = y_pred
+results["Churn Probability"] = y_proba.round(2)
+
+results.head()</pre>
+      </div>
+    </div>
+    <div class="output" data-out="8">
+      <div class="out-tag">Out&nbsp;[<span class="n">8</span>]</div>
+      <div class="scroll-x">
+        <table class="df">
+          <thead><tr><th>tenure</th><th>MonthlyCharges</th><th>Actual</th><th>Predicted</th><th>Churn Probability</th></tr></thead>
+          <tbody>
+            <tr><td>3</td><td>91.10</td><td class="churn-yes">1</td><td class="churn-yes">1</td><td>0.81</td></tr>
+            <tr><td>52</td><td>25.35</td><td class="churn-no">0</td><td class="churn-no">0</td><td>0.06</td></tr>
+            <tr><td>12</td><td>68.40</td><td class="churn-no">0</td><td class="churn-yes">1</td><td>0.63</td></tr>
+            <tr><td>61</td><td>105.20</td><td class="churn-no">0</td><td class="churn-no">0</td><td>0.22</td></tr>
+            <tr><td>1</td><td>75.00</td><td class="churn-yes">1</td><td class="churn-yes">1</td><td>0.88</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 9 ============ -->
+  <section class="cell" data-cell="9">
+    <div class="cell-label"><span class="step-title">Step 9 · Confusion matrix</span><span class="step-desc">— compare predicted vs. actual churn labels</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">9</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="9">from sklearn.metrics import confusion_matrix
+
+cm = confusion_matrix(y_test, y_pred)
+print("Confusion Matrix:")
+print(cm)</pre>
+      </div>
+    </div>
+    <div class="output" data-out="9">
+      <div class="out-tag">Out&nbsp;[<span class="n">9</span>]</div>
+      <div class="cm-wrap">
+        <div class="cm-grid">
+          <div class="cm-head"></div>
+          <div class="cm-head">Pred: No</div>
+          <div class="cm-head">Pred: Yes</div>
+          <div class="cm-head" style="writing-mode: vertical-rl; text-orientation: mixed;">Actual</div>
+          <div class="cm-cell cm-tn"><span class="val">932</span><span class="lbl">True Neg.</span></div>
+          <div class="cm-cell cm-fp"><span class="val">103</span><span class="lbl">False Pos.</span></div>
+          <div class="cm-head"></div>
+          <div class="cm-cell cm-fn"><span class="val">88</span><span class="lbl">False Neg.</span></div>
+          <div class="cm-cell cm-tp"><span class="val">286</span><span class="lbl">True Pos.</span></div>
+        </div>
+        <div class="cm-legend">
+          <div><span class="sw" style="background:rgba(34,224,122,0.5)"></span>Correct predictions (932 + 286 = 1218)</div>
+          <div><span class="sw" style="background:rgba(255,107,107,0.5)"></span>Misclassified customers (103 + 88 = 191)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 10 ============ -->
+  <section class="cell" data-cell="10">
+    <div class="cell-label"><span class="step-title">Step 10 · Evaluation metrics</span><span class="step-desc">— accuracy, precision, recall and F1 score</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">10</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="10">from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+print(f"Accuracy:  {accuracy_score(y_test, y_pred):.3f}")
+print(f"Precision: {precision_score(y_test, y_pred):.3f}")
+print(f"Recall:    {recall_score(y_test, y_pred):.3f}")
+print(f"F1 Score:  {f1_score(y_test, y_pred):.3f}")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="10">
+      <div class="out-tag">Out&nbsp;[<span class="n">10</span>]</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="v">79.3%</div><div class="k">ACCURACY</div></div>
+        <div class="stat-card"><div class="v">73.5%</div><div class="k">PRECISION</div></div>
+        <div class="stat-card"><div class="v">76.5%</div><div class="k">RECALL</div></div>
+        <div class="stat-card"><div class="v">0.750</div><div class="k">F1 SCORE</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 11 ============ -->
+  <section class="cell" data-cell="11">
+    <div class="cell-label"><span class="step-title">Step 11 · Predict a new customer</span><span class="step-desc">— score a single hypothetical customer record</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">11</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="11"># Predict churn for a brand-new customer
+new_customer = {
+    "tenure": 4,
+    "MonthlyCharges": 89.10,
+    "Contract": "Month-to-month",
+    "InternetService": "Fiber optic",
+    "PaymentMethod": "Electronic check"
+}
+
+new_df = pd.DataFrame([new_customer])
+new_encoded = pd.get_dummies(new_df).reindex(columns=X.columns, fill_value=0)
+
+prediction = clf.predict(new_encoded)[0]
+probability = clf.predict_proba(new_encoded)[0][1]
+
+print(f"Prediction: {'Churn' if prediction else 'No Churn'}")
+print(f"Probability: {probability:.2%}")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="11">
+      <div class="out-tag">Out&nbsp;[<span class="n">11</span>]</div>
+      <div class="out-line out-dim">{'tenure': 4, 'MonthlyCharges': 89.1, 'Contract': 'Month-to-month',
+ 'InternetService': 'Fiber optic', 'PaymentMethod': 'Electronic check'}</div>
+      <div class="pred-alert churn">
+        <span class="dot"></span>
+        <span>Prediction: <span class="pv">Churn</span> &nbsp;·&nbsp; Probability: <span class="pv">78.4%</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CELL 12 ============ -->
+  <section class="cell" data-cell="12">
+    <div class="cell-label"><span class="step-title">Step 12 · End-to-end backend flow</span><span class="step-desc">— a deployable script tying the full pipeline together</span></div>
+    <div class="code-block">
+      <div class="in-badge">In&nbsp;[<span class="n">12</span>]:</div>
+      <div class="code-wrap">
+        <div class="cell-actions">
+          <button class="icon-btn copy-btn">Copy</button>
+          <button class="icon-btn run-btn">▶ Run Cell</button>
+        </div>
+        <pre class="code" contenteditable="true" spellcheck="false" data-src="12"># End-to-end backend inference pipeline
+def run_churn_pipeline(csv_path, model_path="churn_tree.pkl"):
+    df = pd.read_csv(csv_path)
+    df_encoded = pd.get_dummies(df, drop_first=True)
+    model = load_model(model_path)
+    predictions = model.predict(df_encoded)
+    return predictions
+
+if __name__ == "__main__":
+    preds = run_churn_pipeline("customer_churn.csv")
+    print(f"Generated {len(preds)} predictions.")</pre>
+      </div>
+    </div>
+    <div class="output" data-out="12">
+      <div class="out-tag">Out&nbsp;[<span class="n">12</span>]</div>
+      <div class="log-line ok"><span class="tag">[1/4]</span><span class="msg">Loading customer_churn.csv</span></div>
+      <div class="log-line ok"><span class="tag">[2/4]</span><span class="msg">Encoding categorical features</span></div>
+      <div class="log-line ok"><span class="tag">[3/4]</span><span class="msg">Loading model churn_tree.pkl</span></div>
+      <div class="log-line ok"><span class="tag">[4/4]</span><span class="msg">Running inference</span></div>
+      <div class="out-line out-green" style="margin-top:6px;">Generated 1409 predictions.</div>
+    </div>
+  </section>
+
+  <footer>Customer Churn Prediction — Decision Tree · interactive teaching notebook · outputs are simulated for demonstration</footer>
+</div>
+
+<script>
+(function(){
+  // ---------- syntax highlighting (applied once on load) ----------
+  function escapeHtml(str){
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var MASTER = /(#.*$)|("""[\s\S]*?"""|'''[\s\S]*?'''|"[^"\n]*"|'[^'\n]*')|\b(import|from|as|def|return|if|else|elif|for|while|in|is|not|and|or|True|False|None|class|try|except|finally|with|lambda)\b|\b(\d+\.?\d*)\b|\b([a-zA-Z_][a-zA-Z0-9_]*)(?=\()/gm;
+
+  function highlight(code){
+    var escaped = escapeHtml(code);
+    return escaped.replace(MASTER, function(match, comment, string, keyword, number, func){
+      if (comment)  return '<span class="tok-comment">' + comment + '</span>';
+      if (string)   return '<span class="tok-string">' + string + '</span>';
+      if (keyword)  return '<span class="tok-keyword">' + keyword + '</span>';
+      if (number)   return '<span class="tok-number">' + number + '</span>';
+      if (func)     return '<span class="tok-func">' + func + '</span>';
+      return match;
+    });
+  }
+
+  document.querySelectorAll('pre.code').forEach(function(el){
+    el.innerHTML = highlight(el.textContent);
+  });
+
+  // ---------- global execution counter (Jupyter-style) ----------
+  var execCount = 12;
+
+  function setBadgeNumber(cellEl, n){
+    var badgeNum = cellEl.querySelector('.in-badge .n');
+    if (badgeNum) badgeNum.textContent = n;
+    var outTag = cellEl.querySelector('.output .out-tag .n');
+    if (outTag) outTag.textContent = n;
+  }
+
+  function runCell(cellEl){
+    var runBtn = cellEl.querySelector('.run-btn');
+    var output = cellEl.querySelector('.output');
+    if (!runBtn || !output) return;
+
+    runBtn.classList.add('running');
+    runBtn.textContent = '⏳ Running...';
+
+    setTimeout(function(){
+      execCount += 1;
+      setBadgeNumber(cellEl, execCount);
+      output.classList.add('show');
+      runBtn.classList.remove('running');
+      runBtn.textContent = '▶ Run Cell';
+      output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 420);
+  }
+
+  document.querySelectorAll('.cell').forEach(function(cellEl){
+    var runBtn = cellEl.querySelector('.run-btn');
+    var copyBtn = cellEl.querySelector('.copy-btn');
+    var codeEl = cellEl.querySelector('pre.code');
+
+    if (runBtn){
+      runBtn.addEventListener('click', function(){ runCell(cellEl); });
+    }
+
+    if (copyBtn && codeEl){
+      copyBtn.addEventListener('click', function(){
+        var text = codeEl.innerText;
+        var done = function(){
+          var original = copyBtn.textContent;
+          copyBtn.textContent = 'Copied!';
+          setTimeout(function(){ copyBtn.textContent = original; }, 1300);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done).catch(done);
+        } else {
+          done();
+        }
+      });
+    }
+  });
+
+  // ---------- toolbar ----------
+  document.getElementById('runAllBtn').addEventListener('click', function(){
+    var cells = Array.prototype.slice.call(document.querySelectorAll('.cell'));
+    cells.forEach(function(cellEl, i){
+      setTimeout(function(){ runCell(cellEl); }, i * 260);
+    });
+  });
+
+  document.getElementById('restartBtn').addEventListener('click', function(){
+    document.querySelectorAll('.output').forEach(function(o){ o.classList.remove('show'); });
+    document.querySelectorAll('.cell').forEach(function(cellEl){
+      var n = cellEl.getAttribute('data-cell');
+      setBadgeNumber(cellEl, n);
+    });
+    execCount = 12;
+  });
+})();
+</script>
+</body>
+</html>
